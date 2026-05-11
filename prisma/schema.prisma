@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Page {
+  id          String   @id @default(cuid())
+  title       String   @default("Untitled")
+  icon        String?
+  cover       String?
+  parentId    String?
+  parent      Page?    @relation("PageChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Page[]   @relation("PageChildren")
+  isFavorite  Boolean  @default(false)
+  isTemplate  Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+  templateCat String?
+  sortOrder   Int      @default(0)
+  content     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  blocks      Block[]
+  database    Database?
+  @@index([parentId])
+  @@index([isFavorite])
+  @@index([isTemplate])
+  @@index([isArchived])
+  @@index([updatedAt])
+  @@map("pages")
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type      String
+  content   Json     @default("{}")
+  parentId  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageId])
+  @@index([parentId])
+  @@index([sortOrder])
+  @@map("blocks")
+}
+
+model Database {
+  id         String   @id @default(cuid())
+  pageId     String   @unique
+  page       Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  name       String   @default("Untitled Database")
+  activeView String   @default("table")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  properties DatabaseProperty[]
+  rows       DatabaseRow[]
+  views      DatabaseView[]
+
+  @@map("databases")
+}
+
+model DatabaseProperty {
+  id          String   @id @default(cuid())
+  databaseId  String
+  database    Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  name        String
+  type        String
+  config      Json     @default("{}")
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  width       Int      @default(200)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cells       DatabaseCell[]
+
+  @@index([databaseId])
+  @@map("database_properties")
+}
+
+model DatabaseRow {
+  id         String   @id @default(cuid())
+  databaseId String
+  database   Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cells      DatabaseCell[]
+
+  @@index([databaseId])
+  @@map("database_rows")
+}
+
+model DatabaseCell {
+  id         String           @id @default(cuid())
+  rowId      String
+  row        DatabaseRow      @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   DatabaseProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  value      Json             @default("{}")
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([rowId, propertyId])
+  @@index([rowId])
+  @@index([propertyId])
+  @@map("database_cells")
+}
+
+model DatabaseView {
+  id         String   @id @default(cuid())
+  databaseId String
+  database   Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  name       String
+  type       String
+  config     Json     @default("{}")
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([databaseId])
+  @@map("database_views")
+}
